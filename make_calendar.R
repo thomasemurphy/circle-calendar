@@ -27,10 +27,20 @@ this_year_dates <-
     '1 day'
   )
 
+n_days_in_year <- length(this_year_dates) - 1
+
 dates_df <- data.frame(
   date = this_year_dates,
   var2 = rnorm(n = length(this_year_dates), mean = 0.5, sd = 0.01)
-)
+) %>%
+  mutate(
+    pct_around = (interval(year_start, date) %/% days(1)) / n_days_in_year,
+    angle = ifelse(
+      pct_around <= 0.5,
+      90 - pct_around * 180/0.5,
+      90 - (pct_around - 0.5) * 180/0.5
+    )
+  )
 
 ggplot(
   data = dates_df,
@@ -42,7 +52,7 @@ ggplot(
   scale_x_date(
     name = '',
     breaks = '1 day',
-    date_labels = '%b %d'
+    date_labels = '%b %e'
   ) +
   theme_bw() + 
   theme(
@@ -52,11 +62,7 @@ ggplot(
     axis.text.y = element_blank(),
     axis.ticks.y = element_blank(),
     axis.text.x = element_text(
-      angle = seq(
-        90,
-        -270,
-        -360 / (length(this_year_dates))
-      ),
+      angle = dates_df$angle,
       size = 3
     )
   )
