@@ -9,14 +9,14 @@ my_year <- 2025
 year_start <- as_datetime(
   paste0(
     my_year,
-    '-01-01'
+    '-01-01 12:00:00'
     )
 )
 
 year_end <- as_datetime(
   paste0(
-    my_year + 1,
-    '-01-01'
+    my_year,
+    '-12-31 12:00:00'
   )
 )
 
@@ -27,11 +27,10 @@ this_year_dates <-
     '1 day'
   )
 
-n_days_in_year <- length(this_year_dates) - 1
+n_days_in_year <- length(this_year_dates)
 
 dates_df <- data.frame(
-  date = this_year_dates,
-  var2 = rnorm(n = length(this_year_dates), mean = 0.5, sd = 0.01)
+  date = this_year_dates
 ) %>%
   mutate(
     pct_around = (interval(year_start, date) %/% days(1)) / n_days_in_year,
@@ -42,7 +41,11 @@ dates_df <- data.frame(
     ),
     date_text = format(date, '%b %e'),
     x_text = date,
-    y_text = 0.95
+    y_text = 0.95,
+    x_day_seg_start = this_year_dates - hours(12),
+    x_day_seg_end = this_year_dates - hours(12),
+    y_day_seg_start = 0.92,
+    y_day_seg_end = 1.01
   )
 
 month_lines_df <- data.frame(
@@ -51,9 +54,9 @@ month_lines_df <- data.frame(
       year_start,
       year_end,
       by = "1 month"),
-    "month") - hours(12),
-  y_start = 0.2,
-  y_end = 1
+    "month"),
+  y_start = 0.1,
+  y_end = 1.02
 ) %>%
   mutate(
     x_end = x_start
@@ -76,6 +79,8 @@ ggplot(
     ),
     size = 0.8
   ) +
+  
+  # months segments
   geom_segment(
     data = month_lines_df,
     mapping = aes(
@@ -85,19 +90,32 @@ ggplot(
       yend = y_end
     ),
     size = 0.1,
+    color = '#aaaaaa'
+  ) +
+  
+  # days segments
+  geom_segment(
+    mapping = aes(
+      x = x_day_seg_start,
+      xend = x_day_seg_end,
+      y = y_day_seg_start,
+      yend = y_day_seg_end
+    ),
+    size = 0.1,
     color = '#bbbbbb'
   ) +
+  
   scale_x_datetime(
     name = '',
     limits = as_datetime(c(
       '2025-01-01 00:00:00',
       '2026-01-01 00:00:00'
     )),
-    breaks = '1 day',
-    date_labels = '%b %e'
+    # breaks = '1 day',
+    # date_labels = '%e'
   ) +
   scale_y_continuous(
-    limits = c(0,1)
+    limits = c(0, 1.02)
   ) +
   theme_bw() + 
   theme(
