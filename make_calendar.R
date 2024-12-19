@@ -42,6 +42,31 @@ dates_df <- data.frame(
     )
   )
 
+month_lines_df_1 <- data.frame(
+  x_line = ceiling_date(
+    seq(
+      year_start,
+      year_end,
+      by = "1 month"),
+    "month") - hours(12),
+  y_line = 0
+)
+
+month_lines_df_2 <- data.frame(
+  x_line = ceiling_date(
+    seq(
+      year_start,
+      year_end,
+      by = "1 month"),
+    "month") - hours(12),
+  y_line = 1
+)
+
+month_lines_df <- rbind(
+  month_lines_df_1,
+  month_lines_df_2
+)
+
 ggplot(
   data = dates_df,
   mapping = aes(
@@ -49,6 +74,14 @@ ggplot(
   )
 ) +
   coord_polar() +
+  geom_line(
+    data = month_lines_df,
+    mapping = aes(
+      x = x_line,
+      y = y_line,
+      group = factor(x_line)
+    )
+  ) +
   scale_x_date(
     name = '',
     breaks = '1 day',
