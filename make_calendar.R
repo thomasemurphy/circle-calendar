@@ -3,8 +3,6 @@ library(plotly)
 
 setwd('circle-calendar/')
 
-# plot all days of year in a line
-
 my_year <- 2025
 
 inner_circle_radius <- 0.2
@@ -34,57 +32,54 @@ this_year_dt <-
     '1 day'
   )
 
-n_days_in_year <- length(this_year_dates)
+n_days_in_year <- length(this_year_dt)
 
-dates_df <- data.frame(
-  date = this_year_dates
+days_df <- data.frame(
+  day_dt = this_year_dt
 ) %>%
   mutate(
     pct_around = (
-      interval(year_start, date) %/% days(1)
+      interval(year_start_ts, day_dt) %/% days(1)
       ) / n_days_in_year,
     angle = ifelse(
       pct_around <= 0.5,
       90 - pct_around * 180/0.5,
       90 - (pct_around - 0.5) * 180/0.5
     ),
-    date_text = format(date, '%e'),
-    x_text = date,
+    date_text = format(day_dt, '%a %e'),
+    x_text = day_dt,
     y_text = 0.965,
-    x_day_seg_start = this_year_dates - hours(12),
-    x_day_seg_end = this_year_dates - hours(12),
+    x_day_seg_start = this_year_dt - hours(12),
+    x_day_seg_end = this_year_dt - hours(12),
     y_day_seg_start = 0.94,
     y_day_seg_end = 0.99,
     wday = ifelse(
-      wday(date) %in% c(1,7),
+      wday(day_dt) %in% c(1,7),
       'weekend',
       ''
       )
   )
 
-month_lines_df <- data.frame(
-  x_start = ceiling_date(
-    seq(
-      year_start,
-      year_end,
-      by = "1 month"),
-    "month"),
-  y_start = inner_circle_radius,
-  y_end = 1
-) %>%
-  mutate(
-    x_end = x_start
-  )
-
-month_labels_df <- data.frame(
-  dt = seq(
+months_df <- data.frame(
+  month_center_dt = seq(
     as_datetime('2025-01-15 12:00:00'),
     as_datetime('2025-12-15 12:00:00'),
     '1 month'
   )
 ) %>%
   mutate(
-    label = format(dt, '%b'),
+    x_start_line = ceiling_date(
+      seq(
+        year_start_ts,
+        year_end_ts,
+        by = "1 month"),
+      "month"),
+    y_start_line = inner_circle_radius,
+    y_end_line = 1,
+    x_end_line = x_start_line
+  ) %>%
+  mutate(
+    month_label = format(month_center_dt, '%B'),
     y_mo = 0.8,
     y_temp = 0.6
   ) %>%
@@ -100,13 +95,19 @@ month_labels_df <- data.frame(
       daily_high,
       '\u00B0F'
     ),
+    month_and_temp_str =
+      paste0(
+        month_label,
+        '\n',
+        temp_string
+      ),
     temp_color = (daily_high + daily_low) / 2
   )
 
 ggplot(
-  data = dates_df,
+  data = days_df,
   mapping = aes(
-    x = date
+    x = day_dt
   )
 ) +
   
@@ -128,50 +129,65 @@ ggplot(
   # weekend days
   geom_tile(
     aes(
-      x = date,
       y = y_text,
       fill = wday
     ),
-    # alpha = 0.2,
-    # width = 0.000001
+    height = (
+      days_df$y_day_seg_end[1] - 
+      days_df$y_day_seg_start[1]
+      ),
+    alpha = 0.2
+  ) +
+  
+  scale_fill_manual(
+    values = c(
+      '#ffffff', #weekday
+      # '#17d646', #weekend
+      '#d4c46d' #weekend
+      )
   ) +
   
   # months segments
   geom_segment(
-    data = month_lines_df,
+    data = months_df,
     mapping = aes(
-      x = x_start,
-      xend = x_end,
-      y = y_start,
-      yend = y_end
+      x = x_start_line,
+      xend = x_end_line,
+      y = y_start_line,
+      yend = y_end_line
     ),
     size = 0.1,
-    color = '#aaaaaa'
+    # color = '#aaaaaa',
+    color = '#d4c46d',
   ) +
   
   # month labels
   geom_text(
-    data = month_labels_df,
+    data = months_df,
     mapping = aes(
-      x = dt,
+      x = month_center_dt,
       y = y_mo,
-      label = label,
+      label = month_and_temp_str,
       color = temp_color
     ),
-    size = 4
+    size = 3,
+    hjust = 0.5,
+    vjust = 0.5
   ) +
   
-  # temperature labels
-  geom_text(
-    data = month_labels_df,
-    mapping = aes(
-      x = dt,
-      y = y_temp,
-      label = temp_string,
-      color = temp_color
-    ),
-    size = 2.5
-  ) +
+  # # temperature labels
+  # geom_text(
+  #   data = month_labels_df,
+  #   mapping = aes(
+  #     x = dt,
+  #     y = y_temp,
+  #     label = temp_string,
+  #     color = temp_color
+  #   ),
+  #   size = 2.5,
+  #   hjust = 0.5,
+  #   vjust = 0.5
+  # ) +
   
   # days segments
   geom_segment(
@@ -182,14 +198,15 @@ ggplot(
       yend = y_day_seg_end
     ),
     size = 0.1,
-    color = '#bbbbbb'
+    color = '#bbbbbb',
   ) +
   
   # inner circle
   geom_hline(
     yintercept = inner_circle_radius,
     size = 0.1,
-    color = '#aaaaaa'
+    # color = '#aaaaaa',
+    color = '#d4c46d',
   ) +
   
   # format axes
@@ -205,27 +222,34 @@ ggplot(
     limits = c(0, 1)
   ) +
   
-  scale_color_gradient(
+  scale_color_gradient2(
     low = '#55cae3',
-    high = '#f87530'
+    mid = '#e8e461',
+    high = '#f87530',
+    midpoint = 58
   ) +
   
+  # write year
   annotate(
     geom = 'text',
-    x = year_start,
-    y = 0,
+    x = year_start_ts,
+    y = 0.08,
     label = '2025',
-    size = 3.5,
-    color = '#d4c46d'
+    size = 5,
+    color = '#d4c46d',
+    # color = '#aaaaaa'
   ) +
   
+  # write city
   annotate(
     geom = 'text',
     x = as_datetime('2025-07-02'),
     y = .1,
     label = 'Oakland',
     size = 2.5,
-    color = '#1b880a',
+    # color = '#1b880a',
+    color = '#d4c46d',
+    # color = '#aaaaaa',
     alpha = 0.8
   ) +
   
