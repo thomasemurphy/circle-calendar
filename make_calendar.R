@@ -1,4 +1,5 @@
 library(tidyverse)
+library(plotly)
 
 setwd('circle-calendar/')
 
@@ -6,24 +7,26 @@ setwd('circle-calendar/')
 
 my_year <- 2025
 
-year_start <- as_datetime(
+inner_circle_radius <- 0.2
+
+year_start_ts <- as_datetime(
   paste0(
     my_year,
     '-01-01 12:00:00'
     )
 )
 
-year_end <- as_datetime(
+year_end_ts <- as_datetime(
   paste0(
     my_year,
     '-12-31 12:00:00'
   )
 )
 
-this_year_dates <-
+this_year_dt <-
   seq(
-    year_start,
-    year_end,
+    year_start_ts,
+    year_end_ts,
     '1 day'
   )
 
@@ -33,19 +36,26 @@ dates_df <- data.frame(
   date = this_year_dates
 ) %>%
   mutate(
-    pct_around = (interval(year_start, date) %/% days(1)) / n_days_in_year,
+    pct_around = (
+      interval(year_start, date) %/% days(1)
+      ) / n_days_in_year,
     angle = ifelse(
       pct_around <= 0.5,
       90 - pct_around * 180/0.5,
       90 - (pct_around - 0.5) * 180/0.5
     ),
-    date_text = format(date, '%b %e'),
+    date_text = format(date, '%e'),
     x_text = date,
-    y_text = 0.95,
+    y_text = 0.965,
     x_day_seg_start = this_year_dates - hours(12),
     x_day_seg_end = this_year_dates - hours(12),
-    y_day_seg_start = 0.92,
-    y_day_seg_end = 1.01
+    y_day_seg_start = 0.94,
+    y_day_seg_end = 0.99,
+    wday = ifelse(
+      wday(date) %in% c(1,7),
+      'weekend',
+      ''
+      )
   )
 
 month_lines_df <- data.frame(
@@ -55,13 +65,24 @@ month_lines_df <- data.frame(
       year_end,
       by = "1 month"),
     "month"),
-  y_start = 0.1,
-  y_end = 1.02
+  y_start = inner_circle_radius,
+  y_end = 1
 ) %>%
   mutate(
     x_end = x_start
   )
 
+month_labels_df <- data.frame(
+  dt = seq(
+    as_datetime('2025-01-15 12:00:00'),
+    as_datetime('2025-12-15 12:00:00'),
+    '1 month'
+  )
+) %>%
+  mutate(
+    label = format(dt, '%b'),
+    y = 0.8
+  )
 
 ggplot(
   data = dates_df,
@@ -69,7 +90,10 @@ ggplot(
     x = date
   )
 ) +
+  
   coord_polar() +
+  
+  # day labels
   geom_text(
     mapping = aes(
       x = x_text,
@@ -77,7 +101,9 @@ ggplot(
       angle = angle,
       label = date_text
     ),
-    size = 0.8
+    size = 0.8,
+    color = '#999999',
+    hjust = 0.5
   ) +
   
   # months segments
@@ -93,6 +119,17 @@ ggplot(
     color = '#aaaaaa'
   ) +
   
+  # month labels
+  geom_text(
+    data = month_labels_df,
+    mapping = aes(
+      x = dt,
+      y = y,
+      label = label
+    ),
+    color = '#aaaaaa'
+  ) +
+  
   # days segments
   geom_segment(
     mapping = aes(
@@ -105,24 +142,37 @@ ggplot(
     color = '#bbbbbb'
   ) +
   
+  # inner circle
+  geom_hline(
+    yintercept = inner_circle_radius,
+    size = 0.1,
+    color = '#aaaaaa'
+  ) +
+  
+  # format axes
   scale_x_datetime(
     name = '',
     limits = as_datetime(c(
       '2025-01-01 00:00:00',
       '2026-01-01 00:00:00'
-    )),
-    # breaks = '1 day',
-    # date_labels = '%e'
+    ))
   ) +
+  
   scale_y_continuous(
-    limits = c(0, 1.02)
+    limits = c(0, 1)
   ) +
+  
+  # plot formatting
   theme_bw() + 
   theme(
-    plot.margin = unit(c(-50,-50,-50,-50), unit='pt'),
+    plot.margin = unit(
+      c(-40, 0, -50, 0),
+      unit='pt'
+      ),
     panel.border = element_blank(),
     panel.grid = element_blank(),
     axis.title.y = element_blank(),
     axis.text = element_blank(),
     axis.ticks.y = element_blank(),
   )
+
