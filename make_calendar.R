@@ -9,6 +9,10 @@ my_year <- 2025
 
 inner_circle_radius <- 0.2
 
+typical_weather <- read_csv(
+  'oakland_daily_high_lows.csv'
+)
+
 year_start_ts <- as_datetime(
   paste0(
     my_year,
@@ -81,7 +85,22 @@ month_labels_df <- data.frame(
 ) %>%
   mutate(
     label = format(dt, '%b'),
-    y = 0.8
+    y_mo = 0.8,
+    y_temp = 0.6
+  ) %>%
+  mutate(
+    daily_high = typical_weather$high,
+    daily_low = typical_weather$low
+  ) %>%
+  mutate(
+    temp_string = 
+    paste0(
+      daily_low,
+      '\u00B0 - ',
+      daily_high,
+      '\u00B0F'
+    ),
+    temp_color = (daily_high + daily_low) / 2
   )
 
 ggplot(
@@ -106,6 +125,17 @@ ggplot(
     hjust = 0.5
   ) +
   
+  # weekend days
+  geom_tile(
+    aes(
+      x = date,
+      y = y_text,
+      fill = wday
+    ),
+    # alpha = 0.2,
+    # width = 0.000001
+  ) +
+  
   # months segments
   geom_segment(
     data = month_lines_df,
@@ -124,10 +154,23 @@ ggplot(
     data = month_labels_df,
     mapping = aes(
       x = dt,
-      y = y,
-      label = label
+      y = y_mo,
+      label = label,
+      color = temp_color
     ),
-    color = '#aaaaaa'
+    size = 4
+  ) +
+  
+  # temperature labels
+  geom_text(
+    data = month_labels_df,
+    mapping = aes(
+      x = dt,
+      y = y_temp,
+      label = temp_string,
+      color = temp_color
+    ),
+    size = 2.5
   ) +
   
   # days segments
@@ -162,6 +205,30 @@ ggplot(
     limits = c(0, 1)
   ) +
   
+  scale_color_gradient(
+    low = '#55cae3',
+    high = '#f87530'
+  ) +
+  
+  annotate(
+    geom = 'text',
+    x = year_start,
+    y = 0,
+    label = '2025',
+    size = 3.5,
+    color = '#d4c46d'
+  ) +
+  
+  annotate(
+    geom = 'text',
+    x = as_datetime('2025-07-02'),
+    y = .1,
+    label = 'Oakland',
+    size = 2.5,
+    color = '#1b880a',
+    alpha = 0.8
+  ) +
+  
   # plot formatting
   theme_bw() + 
   theme(
@@ -174,5 +241,6 @@ ggplot(
     axis.title.y = element_blank(),
     axis.text = element_blank(),
     axis.ticks.y = element_blank(),
+    legend.position = 'none'
   )
 
