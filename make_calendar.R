@@ -1,11 +1,48 @@
 library(tidyverse)
-library(plotly)
 
 setwd('circle-calendar/')
 
 my_year <- 2025
 
+holidays <- read_csv(
+  'holidays_2025.csv'
+  ) %>%
+  filter(
+    !is.na(date)
+  ) %>%
+  mutate(
+    date = paste(date, '2025 12:00:00')
+    ) %>%
+  mutate(
+    date_dt = as_datetime(
+      date,
+      format = '%b %e %Y %H:%M:%S'
+      )
+  ) %>%
+  filter(
+    !(name %in% c(
+      'Inauguration Day',
+      'Presidents\' Day',
+      'Columbus Day',
+      'Veterans Day'
+    ))
+  ) %>%
+  print(n = 20)
+
+# shorten names
+holidays[2, 'name'] <- 'MLK Day'
+holidays[7, 'name'] <- 'Thanksgiving'
+holidays[8, 'name'] <- 'Christmas'
+
 inner_circle_radius <- 0.2
+
+default_color <- '#d4c46d'
+hot_color <- '#e2874c'
+cold_color <- '#6cdda6'
+day_text_color <- '#999999'
+weekend_color <- default_color
+weekday_color <- '#ffffff'
+holiday_color <- '#6caaff'
 
 typical_weather <- read_csv(
   'oakland_daily_high_lows.csv'
@@ -50,14 +87,34 @@ days_df <- data.frame(
     x_text = day_dt,
     y_text = 0.965,
     x_day_seg_start = this_year_dt - hours(12),
-    x_day_seg_end = this_year_dt - hours(12),
+    x_day_seg_end = x_day_seg_start,
     y_day_seg_start = 0.94,
     y_day_seg_end = 0.99,
     wday = ifelse(
       wday(day_dt) %in% c(1,7),
       'weekend',
       ''
-      )
+      ),
+    y_holiday_text = 1.02
+  ) %>%
+  
+  # add holidays
+  left_join(
+    holidays,
+    by = c('day_dt' = 'date_dt')
+  ) %>%
+  
+  # make one column for weekends and holidays
+  mutate(
+    weekend_holiday = ifelse(
+      is.na(name),
+      ifelse(
+        wday == 'weekend',
+        'weekend',
+        'weekday'
+        ),
+      'holiday'
+    )
   )
 
 months_df <- data.frame(
@@ -122,28 +179,39 @@ ggplot(
       label = date_text
     ),
     size = 0.8,
-    color = '#999999',
+    color = day_text_color,
     hjust = 0.5
   ) +
   
-  # weekend days
+  # weekends and holidays
   geom_tile(
     aes(
       y = y_text,
-      fill = wday
+      fill = weekend_holiday
     ),
     height = (
       days_df$y_day_seg_end[1] - 
       days_df$y_day_seg_start[1]
       ),
-    alpha = 0.2
+    alpha = 0.3
+  ) +
+  
+  # holiday labels
+  geom_text(
+    aes(
+      y = y_holiday_text,
+      label = name,
+      angle = angle
+    ),
+    size = 0.6,
+    color = holiday_color
   ) +
   
   scale_fill_manual(
     values = c(
-      '#ffffff', #weekday
-      # '#17d646', #weekend
-      '#d4c46d' #weekend
+      holiday_color,
+      weekday_color,
+      default_color
       )
   ) +
   
@@ -157,8 +225,7 @@ ggplot(
       yend = y_end_line
     ),
     size = 0.1,
-    # color = '#aaaaaa',
-    color = '#d4c46d',
+    color = default_color,
   ) +
   
   # month labels
@@ -174,20 +241,6 @@ ggplot(
     hjust = 0.5,
     vjust = 0.5
   ) +
-  
-  # # temperature labels
-  # geom_text(
-  #   data = month_labels_df,
-  #   mapping = aes(
-  #     x = dt,
-  #     y = y_temp,
-  #     label = temp_string,
-  #     color = temp_color
-  #   ),
-  #   size = 2.5,
-  #   hjust = 0.5,
-  #   vjust = 0.5
-  # ) +
   
   # days segments
   geom_segment(
@@ -205,8 +258,7 @@ ggplot(
   geom_hline(
     yintercept = inner_circle_radius,
     size = 0.1,
-    # color = '#aaaaaa',
-    color = '#d4c46d',
+    color = default_color,
   ) +
   
   # format axes
@@ -219,14 +271,14 @@ ggplot(
   ) +
   
   scale_y_continuous(
-    limits = c(0, 1)
+    limits = c(0, 1.1)
   ) +
   
   scale_color_gradient2(
-    low = '#55cae3',
-    mid = '#e8e461',
-    high = '#f87530',
-    midpoint = 58
+    low = cold_color,
+    mid = default_color,
+    high = hot_color,
+    midpoint = mean(months_df$temp_color)
   ) +
   
   # write year
@@ -234,10 +286,9 @@ ggplot(
     geom = 'text',
     x = year_start_ts,
     y = 0.08,
-    label = '2025',
+    label = my_year,
     size = 5,
-    color = '#d4c46d',
-    # color = '#aaaaaa'
+    color = default_color,
   ) +
   
   # write city
@@ -247,9 +298,7 @@ ggplot(
     y = .1,
     label = 'Oakland',
     size = 2.5,
-    # color = '#1b880a',
-    color = '#d4c46d',
-    # color = '#aaaaaa',
+    color = default_color,
     alpha = 0.8
   ) +
   
