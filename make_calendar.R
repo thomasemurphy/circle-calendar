@@ -1,6 +1,6 @@
 library(tidyverse)
 
-setwd('circle-calendar/')
+setwd('../circle-calendar/')
 
 my_year <- 2025
 
@@ -95,7 +95,7 @@ days_df <- data.frame(
       'weekend',
       ''
       ),
-    y_holiday_text = 1.02
+    y_holiday_text = 0.92
   ) %>%
   
   # add holidays
@@ -161,14 +161,17 @@ months_df <- data.frame(
     temp_color = (daily_high + daily_low) / 2
   )
 
-ggplot(
+g <- ggplot(
   data = days_df,
   mapping = aes(
     x = day_dt
   )
 ) +
   
-  coord_polar() +
+  coord_radial(
+    # rotate.angle = TRUE
+    expand = FALSE
+  ) +
   
   # day labels
   geom_text(
@@ -178,7 +181,7 @@ ggplot(
       angle = angle,
       label = date_text
     ),
-    size = 0.8,
+    size = 1.6,
     color = day_text_color,
     hjust = 0.5
   ) +
@@ -203,7 +206,7 @@ ggplot(
       label = name,
       angle = angle
     ),
-    size = 0.6,
+    size = 1.2,
     color = holiday_color
   ) +
   
@@ -267,13 +270,16 @@ ggplot(
     limits = as_datetime(c(
       '2025-01-01 00:00:00',
       '2026-01-01 00:00:00'
-    ))
+    )),
+    # expand = rep(0, 4)
   ) +
   
   scale_y_continuous(
-    limits = c(0, 1.1)
+    limits = c(0, 1.02),
+    expand = rep(0, 4)
   ) +
   
+  # for monthly temperature highs and lows
   scale_color_gradient2(
     low = cold_color,
     mid = default_color,
@@ -287,7 +293,7 @@ ggplot(
     x = year_start_ts,
     y = 0.08,
     label = my_year,
-    size = 5,
+    size = 10,
     color = default_color,
   ) +
   
@@ -296,8 +302,8 @@ ggplot(
     geom = 'text',
     x = as_datetime('2025-07-02'),
     y = .1,
-    label = 'Oakland',
-    size = 2.5,
+    label = 'Oakland, California',
+    size = 5,
     color = default_color,
     alpha = 0.8
   ) +
@@ -305,10 +311,10 @@ ggplot(
   # plot formatting
   theme_bw() + 
   theme(
-    plot.margin = unit(
-      c(-40, 0, -50, 0),
-      unit='pt'
-      ),
+    # plot.margin = unit(
+    #   c(0, 0, 0, 0),
+    #   unit = 'in'
+    #   ),
     panel.border = element_blank(),
     panel.grid = element_blank(),
     axis.title.y = element_blank(),
@@ -317,3 +323,21 @@ ggplot(
     legend.position = 'none'
   )
 
+# save image
+png(
+  filename = 'circle_cal_oakland_2025_2x2_ft.png',
+  width = 24,
+  height = 24,
+  units = 'in',
+  res = 400
+  )
+print(g)
+dev.off()
+
+# png() works better
+# ggsave(
+#   filename = 'circle_cal_oakland_2025_2x2_ft.png',
+#   width = 24,
+#   height = 24,
+#   units = 'in'
+# )
