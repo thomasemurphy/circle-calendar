@@ -1,6 +1,6 @@
 library(tidyverse)
 
-setwd('../circle-calendar/')
+setwd('circle-calendar/')
 
 my_year <- 2025
 
@@ -237,10 +237,10 @@ g <- ggplot(
     mapping = aes(
       x = month_center_dt,
       y = y_mo,
-      label = month_and_temp_str,
+      label = month_label,
       color = temp_color
     ),
-    size = 3,
+    size = 6,
     hjust = 0.5,
     vjust = 0.5
   ) +
